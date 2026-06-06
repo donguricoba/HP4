@@ -191,7 +191,7 @@
     <p>どんぐりこばっちょ 教室管理</p>
     <input type="password" class="login-input" id="pw-input" placeholder="パスワードを入力" onkeydown="if(event.key==='Enter')tryLogin()">
     <button class="login-btn" onclick="tryLogin()">ログイン</button>
-    <div class="login-error" id="login-error">パスワードが違います</div>
+    <div class="login-error" id="login-error" style="display:none;"></div>
   </div>
 </div>
 
@@ -366,18 +366,25 @@ const DEFAULT_PASSWORD = 'donguri2025';
 const PW_KEY = 'dkb_password';
 
 function getPassword() {
-  return localStorage.getItem(PW_KEY) || DEFAULT_PASSWORD;
+  try {
+    return localStorage.getItem(PW_KEY) || DEFAULT_PASSWORD;
+  } catch(e) {
+    return DEFAULT_PASSWORD;
+  }
 }
 
 // ─── ログイン ───
 function tryLogin() {
   const input = document.getElementById('pw-input').value;
-  if (input === getPassword()) {
+  const correct = getPassword();
+  if (input === correct) {
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('admin-screen').style.display = 'block';
     loadAll();
   } else {
-    document.getElementById('login-error').style.display = 'block';
+    const err = document.getElementById('login-error');
+    err.style.display = 'block';
+    err.textContent = 'パスワードが違います';
     document.getElementById('pw-input').value = '';
   }
 }
@@ -667,7 +674,7 @@ function changePassword() {
   if (old !== getPassword()) { showToast('⚠️ 現在のパスワードが違います'); return; }
   if (!nw) { showToast('⚠️ 新しいパスワードを入力してください'); return; }
   if (nw !== conf) { showToast('⚠️ パスワードが一致しません'); return; }
-  localStorage.setItem(PW_KEY, nw);
+  try { localStorage.setItem(PW_KEY, nw); } catch(e) {}
   document.getElementById('pw-old').value = '';
   document.getElementById('pw-new').value = '';
   document.getElementById('pw-confirm').value = '';
