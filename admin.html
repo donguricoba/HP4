@@ -235,16 +235,20 @@
       <div class="panel active" id="panel-gallery">
         <div class="panel-title">📷 ギャラリー管理</div>
         <div class="card">
-          <h3>写真を追加</h3>
-          <div class="gallery-upload-area" onclick="document.getElementById('file-input').click()">
-            <div style="font-size:2rem;">＋</div>
-            <p>クリックして写真を選択<br><small>JPG・PNG・WEBP対応（複数選択OK）</small></p>
+          <h3>画像URLを追加</h3>
+          <p style="font-size:0.82rem;color:var(--text-light);margin-bottom:16px;">
+            GitHubの <code style="background:var(--green-pale);padding:2px 6px;border-radius:4px;">images/</code> フォルダに画像をアップロードし、そのURLを入力してください。<br>
+            URL形式: <code style="background:var(--green-pale);padding:2px 6px;border-radius:4px;">https://アカウント名.github.io/リポジトリ名/images/ファイル名.jpg</code>
+          </p>
+          <div style="display:flex;gap:8px;margin-bottom:8px;">
+            <input type="text" id="gallery-url-input" placeholder="https://...github.io/.../images/photo.jpg" style="margin-bottom:0;flex:1;">
+            <button class="btn btn-ghost" onclick="addGalleryUrl()">追加</button>
           </div>
-          <input type="file" id="file-input" accept="image/*" multiple onchange="handleImageUpload(event)">
+          <input type="text" id="gallery-caption-input" placeholder="キャプション（任意）" style="font-size:0.85rem;">
         </div>
         <div class="card">
-          <h3>現在の写真一覧 <small style="font-weight:400;color:var(--text-light);">（ドラッグで並べ替え）</small></h3>
-          <div class="gallery-preview" id="gallery-preview"></div>
+          <h3>現在の画像一覧</h3>
+          <div id="gallery-preview"></div>
           <div style="margin-top:16px;">
             <button class="btn btn-green" onclick="saveGallery()">💾 保存して反映</button>
           </div>
@@ -311,32 +315,25 @@
         <div class="panel-title">🖼️ 教室紹介画像</div>
         <div class="card">
           <h3>「教室について」セクションの画像</h3>
-          <p style="font-size:0.85rem;color:var(--text-light);margin-bottom:20px;">「どんぐりの絵」の代わりに表示する画像を設定できます。</p>
+          <p style="font-size:0.82rem;color:var(--text-light);margin-bottom:16px;">
+            GitHubの <code style="background:var(--green-pale);padding:2px 6px;border-radius:4px;">images/</code> フォルダに画像をアップロードし、そのURLを入力してください。
+          </p>
+          <label>画像URL</label>
+          <input type="text" id="about-img-url" placeholder="https://...github.io/.../images/about.jpg">
 
-          <!-- 現在の画像プレビュー -->
-          <div id="about-img-preview-wrap" style="margin-bottom:20px;display:none;">
-            <label>現在の画像</label>
-            <div style="position:relative;display:inline-block;border-radius:16px;overflow:hidden;border:1px solid var(--border);">
-              <img id="about-img-preview" src="" alt="教室紹介画像"
-                style="width:200px;height:200px;object-fit:cover;display:block;">
-              <button onclick="removeAboutImage()" style="
-                position:absolute;top:8px;right:8px;
-                background:rgba(232,131,106,0.9);color:white;border:none;
-                border-radius:50%;width:28px;height:28px;cursor:pointer;
-                font-size:0.8rem;display:flex;align-items:center;justify-content:center;
-              ">✕</button>
-            </div>
+          <!-- プレビュー -->
+          <div id="about-img-preview-wrap" style="margin-bottom:16px;display:none;">
+            <p style="font-size:0.82rem;color:var(--text-light);margin-bottom:8px;">プレビュー</p>
+            <img id="about-img-preview" src="" alt="教室紹介画像"
+              style="width:200px;height:200px;object-fit:cover;border-radius:12px;border:1px solid var(--border);display:block;">
           </div>
 
-          <!-- アップロードエリア -->
-          <div id="about-upload-area" class="gallery-upload-area" onclick="document.getElementById('about-file-input').click()" style="margin-bottom:16px;">
-            <div style="font-size:2rem;">＋</div>
-            <p>クリックして画像を選択<br><small>JPG・PNG・WEBP対応</small></p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-ghost" onclick="previewAboutImage()">👁 プレビュー確認</button>
+            <button class="btn btn-green" onclick="saveAboutImage()">💾 保存して反映</button>
+            <button class="btn btn-ghost" onclick="clearAboutImage()">✕ 画像を削除</button>
           </div>
-          <input type="file" id="about-file-input" accept="image/*" style="display:none;" onchange="handleAboutImageUpload(event)">
-
-          <button class="btn btn-green" onclick="saveAboutImage()">💾 保存して反映</button>
-          <p style="font-size:0.78rem;color:var(--text-light);margin-top:10px;">※ 画像を削除した場合はどんぐりのロゴに戻ります</p>
+          <p style="font-size:0.78rem;color:var(--text-light);margin-top:10px;">※ 削除するとどんぐりのロゴに戻ります</p>
         </div>
       </div>
 
@@ -414,79 +411,41 @@ function showToast(msg) {
 // ─── ギャラリー ───
 let galleryImages = [];
 
-// 画像を圧縮してBase64に変換（最大600px・JPEG品質0.7）
-function compressImage(file) {
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const img = new Image();
-      img.onload = () => {
-        const MAX = 600;
-        let w = img.width, h = img.height;
-        if (w > h && w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
-        else if (h > w && h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
-        else if (w > MAX) { w = h = MAX; }
+// ─── ギャラリー（URL方式）───
+let galleryImages = [];
 
-        const canvas = document.createElement('canvas');
-        canvas.width = w; canvas.height = h;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, w, h);
-        // JPEG 0.72で圧縮（約1枚100〜200KB相当）
-        resolve(canvas.toDataURL('image/jpeg', 0.72));
-      };
-      img.src = ev.target.result;
-    };
-    reader.readAsDataURL(file);
-  });
-}
-
-function handleImageUpload(e) {
-  const files = Array.from(e.target.files);
-  const uploadBtn = document.querySelector('.gallery-upload-area');
-  if (uploadBtn) uploadBtn.innerHTML = '<div style="font-size:2rem;">⏳</div><p>圧縮中...</p>';
-
-  Promise.all(files.map(file =>
-    compressImage(file).then(src => ({
-      src,
-      caption: file.name.replace(/\.[^.]+$/, '')
-    }))
-  )).then(newImgs => {
-    galleryImages.push(...newImgs);
-    renderGalleryPreview();
-    if (uploadBtn) uploadBtn.innerHTML = '<div style="font-size:2rem;">＋</div><p>クリックして写真を選択<br><small>JPG・PNG・WEBP対応（複数選択OK）</small></p>';
-  });
-  e.target.value = '';
+function addGalleryUrl() {
+  const url = document.getElementById('gallery-url-input').value.trim();
+  const caption = document.getElementById('gallery-caption-input').value.trim();
+  if (!url) { showToast('⚠️ URLを入力してください'); return; }
+  galleryImages.push({ src: url, caption: caption || '' });
+  document.getElementById('gallery-url-input').value = '';
+  document.getElementById('gallery-caption-input').value = '';
+  renderGalleryPreview();
 }
 
 function renderGalleryPreview() {
   const preview = document.getElementById('gallery-preview');
   if (!preview) return;
   if (galleryImages.length === 0) {
-    preview.innerHTML = '<p style="color:var(--text-light);font-size:0.85rem;">まだ写真がありません</p>';
+    preview.innerHTML = '<p style="color:var(--text-light);font-size:0.85rem;">まだ画像がありません</p>';
     return;
   }
-  // 容量表示
-  const totalBytes = galleryImages.reduce((s, img) => s + img.src.length * 0.75, 0);
-  const totalKB = Math.round(totalBytes / 1024);
-  const limitKB = 4500;
-  const pct = Math.min(100, Math.round(totalKB / limitKB * 100));
-  const barColor = pct > 80 ? 'var(--coral)' : pct > 50 ? 'var(--yellow)' : 'var(--green)';
-
   preview.innerHTML = `
-    <div style="grid-column:1/-1;margin-bottom:8px;">
-      <div style="display:flex;justify-content:space-between;font-size:0.78rem;color:var(--text-light);margin-bottom:4px;">
-        <span>使用容量</span><span>${totalKB}KB / ${limitKB}KB</span>
-      </div>
-      <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;">
-        <div style="height:100%;width:${pct}%;background:${barColor};border-radius:3px;transition:width 0.3s;"></div>
-      </div>
-    </div>
-    ${galleryImages.map((img, i) => `
-    <div class="gallery-item">
-      <img src="${img.src}" alt="${img.caption}">
-      <button class="gallery-item-del" onclick="removeImage(${i})">✕</button>
-    </div>
-  `).join('')}`;
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      ${galleryImages.map((img, i) => `
+        <div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--cream);border-radius:10px;border:1px solid var(--border);">
+          <img src="${img.src}" alt="${img.caption}"
+            style="width:60px;height:60px;object-fit:cover;border-radius:8px;flex-shrink:0;"
+            onerror="this.style.background='var(--border)';this.alt='読み込みエラー'">
+          <div style="flex:1;min-width:0;">
+            <p style="font-size:0.82rem;color:var(--text-mid);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${img.src}</p>
+            <p style="font-size:0.78rem;color:var(--text-light);">${img.caption || '（キャプションなし）'}</p>
+          </div>
+          <button class="gallery-item-del" onclick="removeImage(${i})">✕</button>
+        </div>
+      `).join('')}
+    </div>`;
 }
 
 function removeImage(i) {
@@ -499,14 +458,7 @@ function saveGallery() {
     localStorage.setItem('dkb_gallery', JSON.stringify(galleryImages));
     showToast('✅ ギャラリーを保存しました');
   } catch(e) {
-    // さらに圧縮して再試行
-    const compressed = galleryImages.map(img => ({...img}));
-    try {
-      // さらに品質を下げてリトライ
-      showToast('⚠️ まだ大きいです。写真を減らすか、小さい画像をお使いください');
-    } catch(e2) {
-      showToast('⚠️ 保存できませんでした。写真を減らしてください');
-    }
+    showToast('⚠️ 保存できませんでした');
   }
 }
 
@@ -606,64 +558,48 @@ function saveAbout() {
   showToast('✅ 紹介文を保存しました');
 }
 
-// ─── 教室紹介画像 ───
-let aboutImageData = null;
-
+// ─── 教室紹介画像（URL方式）───
 function loadAboutImageAdmin() {
   const saved = localStorage.getItem('dkb_about_image');
   if (saved) {
-    aboutImageData = saved;
-    showAboutPreview(saved);
+    document.getElementById('about-img-url').value = saved;
+    previewAboutImage();
   }
 }
 
-function showAboutPreview(src) {
+function previewAboutImage() {
+  const url = document.getElementById('about-img-url').value.trim();
   const wrap = document.getElementById('about-img-preview-wrap');
   const img = document.getElementById('about-img-preview');
-  const area = document.getElementById('about-upload-area');
-  if (wrap && img) {
-    img.src = src;
+  if (url && wrap && img) {
+    img.src = url;
     wrap.style.display = 'block';
-    if (area) area.style.display = 'none';
-  }
-}
-
-function handleAboutImageUpload(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  const area = document.getElementById('about-upload-area');
-  if (area) area.innerHTML = '<div style="font-size:2rem;">⏳</div><p>圧縮中...</p>';
-
-  compressImage(file).then(src => {
-    aboutImageData = src;
-    showAboutPreview(src);
-  });
-  e.target.value = '';
-}
-
-function removeAboutImage() {
-  aboutImageData = null;
-  const wrap = document.getElementById('about-img-preview-wrap');
-  const area = document.getElementById('about-upload-area');
-  if (wrap) wrap.style.display = 'none';
-  if (area) {
-    area.style.display = 'block';
-    area.innerHTML = '<div style="font-size:2rem;">＋</div><p>クリックして画像を選択<br><small>JPG・PNG・WEBP対応</small></p>';
+  } else if (wrap) {
+    wrap.style.display = 'none';
   }
 }
 
 function saveAboutImage() {
+  const url = document.getElementById('about-img-url').value.trim();
   try {
-    if (aboutImageData) {
-      localStorage.setItem('dkb_about_image', aboutImageData);
+    if (url) {
+      localStorage.setItem('dkb_about_image', url);
       showToast('✅ 教室紹介画像を保存しました');
     } else {
       localStorage.removeItem('dkb_about_image');
-      showToast('✅ 画像を削除しました（ロゴに戻ります）');
+      showToast('✅ 画像を削除しました');
     }
   } catch(e) {
-    showToast('⚠️ 画像が大きすぎます。別の画像をお試しください');
+    showToast('⚠️ 保存できませんでした');
   }
+}
+
+function clearAboutImage() {
+  document.getElementById('about-img-url').value = '';
+  const wrap = document.getElementById('about-img-preview-wrap');
+  if (wrap) wrap.style.display = 'none';
+  localStorage.removeItem('dkb_about_image');
+  showToast('✅ 画像を削除しました（ロゴに戻ります）');
 }
 
 // ─── パスワード変更 ───
